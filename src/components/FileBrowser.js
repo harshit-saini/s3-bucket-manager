@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import useSWRInfinite from 'swr/infinite';
 import { useCredentials } from '@/contexts/CredentialsContext';
 import { getFileType, getFileName, getFolderName, formatFileSize, formatDate, getBreadcrumbs } from '@/lib/fileUtils';
 import ContextMenu from './ContextMenu';
@@ -39,52 +40,55 @@ export default function FileBrowser({
   onRefreshTrigger,
 }) {
   const { getHeaders } = useCredentials();
-  const [folders, setFolders] = useState([]);
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [nextToken, setNextToken] = useState(null);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [thumbnailUrls, setThumbnailUrls] = useState({});
 
-  const loadFiles = useCallback(async (prefix, token = null) => {
-    if (token) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
+  // SWR Fetcher
+  const fetcher = async (url) => {
+    const res = await fetch(url, { headers: getHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load files');
+    return data;
+  };
+
+  // SWR Key Generator for pagination
+  const getKey = (pageIndex, previousPageData) => {
+    // Reached the end
+    if (previousPageData && !previousPageData.nextToken) return null;
+
+    let url = `/api/s3/list?prefix=${encodeURIComponent(currentPrefix)}`;
+    if (pageIndex !== 0 && previousPageData.nextToken) {
+      url += `&continuationToken=${encodeURIComponent(previousPageData.nextToken)}`;
     }
+    return url;
+  };
 
-    try {
-      let url = `/api/s3/list?prefix=${encodeURIComponent(prefix)}`;
-      if (token) url += `&continuationToken=${encodeURIComponent(token)}`;
+  const { data, error, isLoading, isValidating, size, setSize, mutate } = useSWRInfinite(getKey, fetcher, {
+    revalidateFirstPage: false,
+    revalidateOnFocus: true,
+  });
 
-      const res = await fetch(url, { headers: getHeaders() });
-      const data = await res.json();
-
-      if (res.ok) {
-        if (token) {
-          setFolders(prev => [...prev, ...(data.folders || [])]);
-          setFiles(prev => [...prev, ...(data.files || [])]);
-        } else {
-          setFolders(data.folders || []);
-          setFiles(data.files || []);
-        }
-        setNextToken(data.nextToken);
-      } else {
-        toast.error(data.error || 'Failed to load files');
-      }
-    } catch (err) {
-      toast.error('Failed to load files');
-    }
-
-    setLoading(false);
-    setLoadingMore(false);
-  }, [getHeaders]);
+  const folders = data ? data.flatMap(page => page.folders || []) : [];
+  const files = data ? data.flatMap(page => page.files || []) : [];
+  const loading = isLoading;
+  const loadingMore = isValidating && size > 1;
+  const nextToken = data && data.length > 0 ? data[data.length - 1].nextToken : null;
 
   useEffect(() => {
-    loadFiles(currentPrefix);
+    if (error) {
+      toast.error(error.message || 'Failed to load files');
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (onRefreshTrigger) {
+      mutate();
+    }
+  }, [onRefreshTrigger, mutate]);
+
+  useEffect(() => {
     setThumbnailUrls({});
-  }, [currentPrefix, loadFiles, onRefreshTrigger]);
+  }, [currentPrefix]);
 
   // Load thumbnails for images in grid view
   useEffect(() => {
@@ -211,7 +215,17 @@ export default function FileBrowser({
       if (res.ok) {
         toast.success(`Deleted ${allKeys.length} item${allKeys.length > 1 ? 's' : ''}`);
         onSelectionChange([]);
-        loadFiles(currentPrefix);
+        mutate(
+          currentData => {
+            if (!currentData) return currentData;
+            return currentData.map(page => ({
+              ...page,
+              files: page.files ? page.files.filter(f => !allKeys.includes(f.key)) : [],
+              folders: page.folders ? page.folders.filter(f => !allKeys.includes(f.prefix)) : []
+            }));
+          },
+          { revalidate: true }
+        );
       } else {
         const data = await res.json();
         toast.error(data.error || 'Failed to delete');
@@ -396,7 +410,7 @@ export default function FileBrowser({
         <div style={{ textAlign: 'center', padding: 24 }}>
           <button
             className="btn btn-secondary"
-            onClick={() => loadFiles(currentPrefix, nextToken)}
+            onClick={() => setSize(size + 1)}
             disabled={loadingMore}
           >
             {loadingMore ? <Loader2 size={16} className="animate-spin" /> : null}
