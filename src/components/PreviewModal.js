@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useCredentials } from '@/contexts/CredentialsContext';
 import { getFileType, getFileName } from '@/lib/fileUtils';
 import {
   X, Download, Share2, ChevronLeft, ChevronRight,
@@ -10,7 +9,6 @@ import {
 import toast from 'react-hot-toast';
 
 export default function PreviewModal({ fileKey, files = [], onClose, onShare, onNavigate }) {
-  const { getHeaders } = useCredentials();
   const [url, setUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [textContent, setTextContent] = useState(null);
@@ -28,9 +26,7 @@ export default function PreviewModal({ fileKey, files = [], onClose, onShare, on
     setUrl(null);
 
     try {
-      const res = await fetch(`/api/s3/preview?key=${encodeURIComponent(key)}`, {
-        headers: getHeaders(),
-      });
+      const res = await fetch(`/api/s3/preview?key=${encodeURIComponent(key)}`);
       const data = await res.json();
       if (res.ok && data.url) {
         setUrl(data.url);
@@ -53,7 +49,7 @@ export default function PreviewModal({ fileKey, files = [], onClose, onShare, on
       toast.error('Failed to load preview');
     }
     setLoading(false);
-  }, [getHeaders]);
+  }, []);
 
   useEffect(() => {
     loadPreview(fileKey);
@@ -71,9 +67,7 @@ export default function PreviewModal({ fileKey, files = [], onClose, onShare, on
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(`/api/s3/download?key=${encodeURIComponent(fileKey)}`, {
-        headers: getHeaders(),
-      });
+      const res = await fetch(`/api/s3/download?key=${encodeURIComponent(fileKey)}`);
       const data = await res.json();
       if (res.ok && data.url) {
         window.open(data.url, '_blank');

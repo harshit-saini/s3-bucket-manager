@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useCredentials } from '@/contexts/CredentialsContext';
 import { X, Folder, ChevronRight, Loader2, FolderInput } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function MoveDialog({ items = [], currentPrefix = '', onClose, onMoved }) {
-  const { getHeaders } = useCredentials();
   const [folders, setFolders] = useState([]);
   const [selectedPath, setSelectedPath] = useState('');
   const [browsingPath, setBrowsingPath] = useState('');
@@ -17,9 +15,7 @@ export default function MoveDialog({ items = [], currentPrefix = '', onClose, on
   const loadFolders = useCallback(async (prefix) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/s3/list?prefix=${encodeURIComponent(prefix)}&maxKeys=200`, {
-        headers: getHeaders(),
-      });
+      const res = await fetch(`/api/s3/list?prefix=${encodeURIComponent(prefix)}&maxKeys=200`);
       const data = await res.json();
       if (res.ok) {
         setFolders(data.folders || []);
@@ -28,7 +24,7 @@ export default function MoveDialog({ items = [], currentPrefix = '', onClose, on
       // silently fail
     }
     setLoading(false);
-  }, [getHeaders]);
+  }, []);
 
   useEffect(() => {
     loadFolders(browsingPath);
@@ -71,7 +67,6 @@ export default function MoveDialog({ items = [], currentPrefix = '', onClose, on
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...getHeaders(),
           },
           body: JSON.stringify({ source: item, destination }),
         });

@@ -1,12 +1,10 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { createS3Client, extractCredentials, errorResponse, successResponse } from '@/lib/s3';
+import { getSystemS3Client, getRequestContext, errorResponse, successResponse } from '@/lib/s3';
 
 export async function POST(request) {
-  const credentials = extractCredentials(request);
-  if (!credentials) {
-    return errorResponse('Missing credentials', 401);
-  }
+  const context = await getRequestContext();
+  if (context.error) return errorResponse(context.error, context.status);
 
   try {
     const body = await request.json();
@@ -16,14 +14,14 @@ export async function POST(request) {
       return errorResponse('Key is required');
     }
 
-    // Default to 24 hours, max 7 days (604800 seconds)
     const ttl = Math.min(Math.max(parseInt(expiresIn || '86400', 10), 60), 604800);
 
-    const s3 = createS3Client(credentials);
+    const s3 = getSystemS3Client();
+    const absoluteKey = context.userPrefix + key;
 
     const command = new GetObjectCommand({
-      Bucket: credentials.bucket,
-      Key: key,
+      Bucket: context.bucket,
+      Key: absoluteKey,
     });
 
     const url = await getSignedUrl(s3, command, { expiresIn: ttl });

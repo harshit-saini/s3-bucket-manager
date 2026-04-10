@@ -1,41 +1,46 @@
 import { S3Client } from '@aws-sdk/client-s3';
+import { auth } from '@clerk/nextjs/server';
 
 /**
- * Create an S3 client from credentials object
+ * Get S3 Client from central .env credentials
  */
-export function createS3Client(credentials) {
+export function getSystemS3Client() {
   const config = {
-    region: credentials.region,
+    region: process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1',
     credentials: {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
     },
   };
 
-  // Support custom endpoints (MinIO, R2, DigitalOcean Spaces, etc.)
-  if (credentials.endpoint) {
-    config.endpoint = credentials.endpoint;
-    config.forcePathStyle = true; // Required for most S3-compatible services
+  if (process.env.S3_ENDPOINT || process.env.AWS_S3_ENDPOINT) {
+    config.endpoint = process.env.S3_ENDPOINT || process.env.AWS_S3_ENDPOINT;
+    config.forcePathStyle = true;
   }
 
   return new S3Client(config);
 }
 
 /**
- * Extract credentials from request headers
+ * Get bucket details from system and authenticate user
  */
-export function extractCredentials(request) {
-  const accessKeyId = request.headers.get('x-s3-access-key-id');
-  const secretAccessKey = request.headers.get('x-s3-secret-access-key');
-  const region = request.headers.get('x-s3-region');
-  const bucket = request.headers.get('x-s3-bucket');
-  const endpoint = request.headers.get('x-s3-endpoint') || '';
-
-  if (!accessKeyId || !secretAccessKey || !region || !bucket) {
-    return null;
+export async function getRequestContext() {
+  // 1. Authenticate user via Clerk
+  const { userId } = await auth();
+  if (!userId) {
+    return { error: 'Unauthorized', status: 401 };
   }
 
-  return { accessKeyId, secretAccessKey, region, bucket, endpoint };
+  // 2. Validate system bucket config
+  const bucket = process.env.S3_BUCKET_NAME || process.env.AWS_BUCKET_NAME;
+  if (!(process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID) || !bucket) {
+    return { error: 'System S3 not configured', status: 500 };
+  }
+
+  // Force all paths for this user into their specific virtual folder
+  const userPrefix = `users/${userId}/`;
+  
+  return { userId, bucket, userPrefix };
 }
 
 /**

@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1027.0",
     "@aws-sdk/s3-request-presigner": "^3.1027.0",
+    "@clerk/nextjs": "^7.0.12",
+    "@prisma/client": "^6.19.3",
     "@uppy/aws-s3": "^5.1.0",
     "@uppy/core": "^5.2.0",
     "@uppy/dashboard": "^5.1.1",
@@ -17,9 +20,11 @@
     "@uppy/status-bar": "^5.1.0",
     "lucide-react": "^1.8.0",
     "next": "16.2.3",
+    "prisma": "^6.19.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hot-toast": "^2.6.0",
+    "svix": "^1.90.0",
     "swr": "^2.4.1"
   }
 }

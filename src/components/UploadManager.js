@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { useCredentials } from '@/contexts/CredentialsContext';
 import {
   Upload, X, Pause, Play, CheckCircle, AlertCircle,
   Loader2, Minimize2, Maximize2, File
@@ -17,7 +16,6 @@ const MAX_RETRIES = 3;
  * Handles chunking, presigned URLs, progress, pause/resume, and retry.
  */
 export default function UploadManager({ currentPrefix = '', onUploadComplete, showUploadZone = false, setShowUploadZone }) {
-  const { getHeaders } = useCredentials();
   const [uploads, setUploads] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -51,15 +49,14 @@ export default function UploadManager({ currentPrefix = '', onUploadComplete, sh
     pauseFlags.current[id] = false;
 
     try {
-      // 1. Initiate multipart upload  
       const initRes = await fetch('/api/s3/upload/initiate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getHeaders() },
-        body: JSON.stringify({ key, contentType: file.type || 'application/octet-stream' }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, size: file.size, contentType: file.type || 'application/octet-stream' }),
       });
 
       if (!initRes.ok) throw new Error('Failed to initiate upload');
-      const { uploadId } = await initRes.json();
+      const { uploadId, key: serverKey } = await initRes.json();
 
       // 2. Upload parts
       const parts = [];
@@ -77,11 +74,10 @@ export default function UploadManager({ currentPrefix = '', onUploadComplete, sh
         const end = Math.min(start + CHUNK_SIZE, file.size);
         const chunk = file.slice(start, end);
 
-        // Get presigned URL
         const signRes = await fetch('/api/s3/upload/sign-part', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getHeaders() },
-          body: JSON.stringify({ key, uploadId, partNumber: partNum }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: serverKey, uploadId, partNumber: partNum }),
         });
 
         if (!signRes.ok) throw new Error('Failed to sign part');
@@ -124,8 +120,8 @@ export default function UploadManager({ currentPrefix = '', onUploadComplete, sh
       // 3. Complete multipart upload
       const completeRes = await fetch('/api/s3/upload/complete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getHeaders() },
-        body: JSON.stringify({ key, uploadId, parts }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: serverKey, uploadId, parts }),
       });
 
       if (!completeRes.ok) throw new Error('Failed to complete upload');
@@ -139,7 +135,7 @@ export default function UploadManager({ currentPrefix = '', onUploadComplete, sh
         toast.error(`Failed to upload ${file.name}`);
       }
     }
-  }, [currentPrefix, getHeaders, updateUpload, onUploadComplete]);
+  }, [currentPrefix, updateUpload, onUploadComplete]);
 
   const handleFiles = useCallback((fileList) => {
     const files = Array.from(fileList);

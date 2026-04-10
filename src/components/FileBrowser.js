@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
-import { useCredentials } from '@/contexts/CredentialsContext';
 import { getFileType, getFileName, getFolderName, formatFileSize, formatDate, getBreadcrumbs } from '@/lib/fileUtils';
 import ContextMenu from './ContextMenu';
 import {
@@ -39,13 +38,12 @@ export default function FileBrowser({
   onMove,
   onRefreshTrigger,
 }) {
-  const { getHeaders } = useCredentials();
   const [contextMenu, setContextMenu] = useState(null);
   const [thumbnailUrls, setThumbnailUrls] = useState({});
 
   // SWR Fetcher
   const fetcher = async (url) => {
-    const res = await fetch(url, { headers: getHeaders() });
+    const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load files');
     return data;
@@ -97,9 +95,7 @@ export default function FileBrowser({
     imageFiles.forEach(async (file) => {
       if (thumbnailUrls[file.key]) return;
       try {
-        const res = await fetch(`/api/s3/preview?key=${encodeURIComponent(file.key)}`, {
-          headers: getHeaders(),
-        });
+        const res = await fetch(`/api/s3/preview?key=${encodeURIComponent(file.key)}`);
         const data = await res.json();
         if (res.ok && data.url) {
           setThumbnailUrls(prev => ({ ...prev, [file.key]: data.url }));
@@ -108,7 +104,7 @@ export default function FileBrowser({
         // silently skip
       }
     });
-  }, [files, viewMode, getHeaders]);
+  }, [files, viewMode]);
 
   // Sort
   const sortItems = useCallback((items) => {
@@ -163,9 +159,7 @@ export default function FileBrowser({
 
   const handleDownload = async (key) => {
     try {
-      const res = await fetch(`/api/s3/download?key=${encodeURIComponent(key)}`, {
-        headers: getHeaders(),
-      });
+      const res = await fetch(`/api/s3/download?key=${encodeURIComponent(key)}`);
       const data = await res.json();
       if (res.ok && data.url) {
         window.open(data.url, '_blank');
@@ -191,7 +185,7 @@ export default function FileBrowser({
           do {
             let url = `/api/s3/list?prefix=${encodeURIComponent(key)}&maxKeys=1000`;
             if (token) url += `&continuationToken=${encodeURIComponent(token)}`;
-            const listRes = await fetch(url, { headers: getHeaders() });
+            const listRes = await fetch(url);
             const listData = await listRes.json();
             if (listRes.ok) {
               allKeys.push(...(listData.files || []).map(f => f.key));
@@ -208,7 +202,7 @@ export default function FileBrowser({
 
       const res = await fetch('/api/s3/delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keys: allKeys }),
       });
 

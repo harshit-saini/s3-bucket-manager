@@ -1,11 +1,9 @@
 import { CopyObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { createS3Client, extractCredentials, errorResponse, successResponse } from '@/lib/s3';
+import { getSystemS3Client, getRequestContext, errorResponse, successResponse } from '@/lib/s3';
 
 export async function POST(request) {
-  const credentials = extractCredentials(request);
-  if (!credentials) {
-    return errorResponse('Missing credentials', 401);
-  }
+  const context = await getRequestContext();
+  if (context.error) return errorResponse(context.error, context.status);
 
   try {
     const body = await request.json();
@@ -15,8 +13,10 @@ export async function POST(request) {
       return errorResponse('Source and destination are required');
     }
 
-    const s3 = createS3Client(credentials);
-    const bucket = credentials.bucket;
+    const s3 = getSystemS3Client();
+    const bucket = context.bucket;
+    const absoluteSource = context.userPrefix + source;
+    const absoluteDest = context.userPrefix + destination;
 
     // Check if source is a "folder" (prefix)
     const isFolder = source.endsWith('/');
@@ -28,16 +28,17 @@ export async function POST(request) {
       do {
         const listResponse = await s3.send(new ListObjectsV2Command({
           Bucket: bucket,
-          Prefix: source,
+          Prefix: absoluteSource,
           ContinuationToken: continuationToken,
         }));
 
         for (const obj of (listResponse.Contents || [])) {
-          const newKey = destination + obj.Key.slice(source.length);
+          const newKey = absoluteDest + obj.Key.slice(absoluteSource.length);
 
           await s3.send(new CopyObjectCommand({
             Bucket: bucket,
-            CopySource: `${bucket}/${encodeURIComponent(obj.Key)}`,
+            // S3 CopySource requires encoding, BUT slashes should not be encoded or it breaks if folders are deep
+            CopySource: `${bucket}/${obj.Key.split('/').map(encodeURIComponent).join('/')}`,
             Key: newKey,
           }));
 
@@ -57,13 +58,13 @@ export async function POST(request) {
       // Move single file
       await s3.send(new CopyObjectCommand({
         Bucket: bucket,
-        CopySource: `${bucket}/${encodeURIComponent(source)}`,
-        Key: destination,
+        CopySource: `${bucket}/${absoluteSource.split('/').map(encodeURIComponent).join('/')}`,
+        Key: absoluteDest,
       }));
 
       await s3.send(new DeleteObjectCommand({
         Bucket: bucket,
-        Key: source,
+        Key: absoluteSource,
       }));
 
       return successResponse({ moved: 1 });

@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useCredentials } from '@/contexts/CredentialsContext';
 import { SHARE_EXPIRY_OPTIONS } from '@/lib/constants';
 import { getFileName } from '@/lib/fileUtils';
 import { X, Link2, Copy, Check, Clock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ShareDialog({ fileKey, onClose }) {
-  const { getHeaders } = useCredentials();
   const [expiresIn, setExpiresIn] = useState(86400);
   const [shareUrl, setShareUrl] = useState(null);
   const [expiresAt, setExpiresAt] = useState(null);
@@ -24,7 +22,6 @@ export default function ShareDialog({ fileKey, onClose }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getHeaders(),
         },
         body: JSON.stringify({ key: fileKey, expiresIn }),
       });

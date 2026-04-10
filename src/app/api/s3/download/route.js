@@ -1,27 +1,27 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { createS3Client, extractCredentials, errorResponse, successResponse } from '@/lib/s3';
+import { getSystemS3Client, getRequestContext, errorResponse, successResponse } from '@/lib/s3';
 
 export async function GET(request) {
-  const credentials = extractCredentials(request);
-  if (!credentials) {
-    return errorResponse('Missing credentials', 401);
-  }
+  const context = await getRequestContext();
+  if (context.error) return errorResponse(context.error, context.status);
 
   const { searchParams } = new URL(request.url);
-  const key = searchParams.get('key');
+  const relativeKey = searchParams.get('key');
 
-  if (!key) {
+  if (!relativeKey) {
     return errorResponse('Key is required');
   }
 
+  const absoluteKey = context.userPrefix + relativeKey;
+
   try {
-    const s3 = createS3Client(credentials);
-    const fileName = key.split('/').pop() || 'download';
+    const s3 = getSystemS3Client();
+    const fileName = relativeKey.split('/').pop() || 'download';
 
     const command = new GetObjectCommand({
-      Bucket: credentials.bucket,
-      Key: key,
+      Bucket: context.bucket,
+      Key: absoluteKey,
       ResponseContentDisposition: `attachment; filename="${encodeURIComponent(fileName)}"`,
     });
 

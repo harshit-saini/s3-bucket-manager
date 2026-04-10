@@ -1,6 +1,6 @@
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
-import { CredentialsProvider } from '@/contexts/CredentialsContext';
+import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata = {
   title: 'S3 Manager — Cloud Storage Browser',
@@ -10,9 +10,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning>
-        <CredentialsProvider>
+    <ClerkProvider>
+      <html lang="en">
+        <body suppressHydrationWarning>
           {children}
           <Toaster
             position="bottom-center"
@@ -34,8 +34,8 @@ export default function RootLayout({ children }) {
               },
             }}
           />
-        </CredentialsProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
