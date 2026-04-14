@@ -1,19 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useSWRInfinite from 'swr/infinite';
-import { getFileType, getFileName, getFolderName, formatFileSize, formatDate, getBreadcrumbs } from '@/lib/fileUtils';
+import { getFileType, formatFileSize, formatDate } from '@/lib/fileUtils';
 import ContextMenu from './ContextMenu';
 import {
   Folder, Image, Video, Music, FileText, FileCode, File,
-  Archive, MoreVertical, Loader2, FolderOpen
+  Archive, Loader2, FolderOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const iconComponents = {
-  Image, Video, Music, FileText, FileCode, File, Archive,
-  Sheet: FileText, Presentation: FileText,
-};
 
 function getIconComponent(fileType) {
   const map = {
@@ -36,6 +31,8 @@ export default function FileBrowser({
   onPreview,
   onShare,
   onMove,
+  onRename,
+  onVisibleItemsChange,
   onRefreshTrigger,
 }) {
   const [contextMenu, setContextMenu] = useState(null);
@@ -133,6 +130,19 @@ export default function FileBrowser({
 
   const filteredFolders = filterItems(folders);
   const filteredFiles = sortItems(filterItems(files));
+  const totalVisibleItems = filteredFolders.length + filteredFiles.length;
+
+  useEffect(() => {
+    if (!onVisibleItemsChange) return;
+
+    onVisibleItemsChange({
+      items: [
+        ...filteredFolders.map(folder => folder.prefix),
+        ...filteredFiles.map(file => file.key),
+      ],
+      fileItems: filteredFiles.map(file => file.key),
+    });
+  }, [filteredFolders, filteredFiles, onVisibleItemsChange]);
 
   const handleContextMenu = (e, item, isFolder) => {
     e.preventDefault();
@@ -144,6 +154,14 @@ export default function FileBrowser({
         { id: 'preview', label: 'Preview', icon: 'preview', action: () => onPreview(item.key) },
         { id: 'download', label: 'Download', icon: 'download', action: () => handleDownload(item.key) },
         { id: 'share', label: 'Share', icon: 'share', action: () => onShare(item.key) },
+        { id: 'rename', label: 'Rename', icon: 'rename', action: () => onRename?.(item.key) },
+        { id: 'copy-path', label: 'Copy Path', icon: 'copy', action: () => handleCopyPath(item.key) },
+        { divider: true },
+      );
+    } else {
+      menuItems.push(
+        { id: 'rename', label: 'Rename', icon: 'rename', action: () => onRename?.(item.prefix) },
+        { id: 'copy-path', label: 'Copy Path', icon: 'copy', action: () => handleCopyPath(item.prefix) },
         { divider: true },
       );
     }
@@ -166,6 +184,15 @@ export default function FileBrowser({
       }
     } catch {
       toast.error('Failed to download');
+    }
+  };
+
+  const handleCopyPath = async (key) => {
+    try {
+      await navigator.clipboard.writeText(`/${key}`);
+      toast.success('Path copied');
+    } catch {
+      toast.error('Failed to copy path');
     }
   };
 
@@ -270,13 +297,26 @@ export default function FileBrowser({
 
   return (
     <div className="file-browser">
+      <div className="file-browser-meta">
+        <span>{filteredFolders.length} folder{filteredFolders.length === 1 ? '' : 's'}</span>
+        <span className="meta-dot">|</span>
+        <span>{filteredFiles.length} file{filteredFiles.length === 1 ? '' : 's'}</span>
+        {searchQuery && (
+          <>
+            <span className="meta-dot">|</span>
+            <span>{totalVisibleItems} match{totalVisibleItems === 1 ? '' : 'es'}</span>
+          </>
+        )}
+      </div>
+
       {viewMode === 'grid' ? (
         <div className="file-grid">
           {/* Folders */}
-          {filteredFolders.map(folder => (
+          {filteredFolders.map((folder, index) => (
             <div
               key={folder.prefix}
               className={`file-item-grid ${selectedItems.includes(folder.prefix) ? 'selected' : ''}`}
+              style={{ '--item-index': index }}
               onClick={() => onNavigate(folder.prefix)}
               onContextMenu={(e) => handleContextMenu(e, folder, true)}
             >
@@ -291,11 +331,12 @@ export default function FileBrowser({
                 <Folder size={28} />
               </div>
               <div className="file-item-name">{folder.name}</div>
+              <div className="file-item-meta">Folder</div>
             </div>
           ))}
 
           {/* Files */}
-          {filteredFiles.map(file => {
+          {filteredFiles.map((file, index) => {
             const fileType = getFileType(file.key);
             const IconComponent = getIconComponent(fileType);
             const hasThumbnail = fileType === 'image' && thumbnailUrls[file.key];
@@ -304,6 +345,7 @@ export default function FileBrowser({
               <div
                 key={file.key}
                 className={`file-item-grid ${selectedItems.includes(file.key) ? 'selected' : ''}`}
+                style={{ '--item-index': filteredFolders.length + index }}
                 onClick={() => handleFileClick(file)}
                 onContextMenu={(e) => handleContextMenu(e, file, false)}
               >
@@ -323,7 +365,7 @@ export default function FileBrowser({
                 )}
                 <div className="file-item-name">{file.name}</div>
                 <div className="file-item-meta">
-                  {formatFileSize(file.size)}
+                  {fileType.toUpperCase()} | {formatFileSize(file.size)}
                 </div>
               </div>
             );
@@ -332,7 +374,7 @@ export default function FileBrowser({
       ) : (
         <div className="file-list">
           {/* List header */}
-          <div className="file-item-list" style={{ cursor: 'default', color: 'var(--text-tertiary)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
+          <div className="file-item-list file-list-head">
             <div></div>
             <div>Name</div>
             <div>Size</div>
@@ -348,12 +390,12 @@ export default function FileBrowser({
               onClick={() => onNavigate(folder.prefix)}
               onContextMenu={(e) => handleContextMenu(e, folder, true)}
             >
-              <div className="file-item-icon folder" style={{ width: 32, height: 32, borderRadius: 6 }}>
+              <div className="file-item-icon folder list-icon">
                 <Folder size={18} />
               </div>
               <div className="file-item-name">{folder.name}</div>
-              <div className="file-item-size">—</div>
-              <div className="file-item-date">—</div>
+              <div className="file-item-size">-</div>
+              <div className="file-item-date">-</div>
               <div>
                 <input
                   type="checkbox"
@@ -378,7 +420,7 @@ export default function FileBrowser({
                 onClick={() => handleFileClick(file)}
                 onContextMenu={(e) => handleContextMenu(e, file, false)}
               >
-                <div className={`file-item-icon ${fileType}`} style={{ width: 32, height: 32, borderRadius: 6 }}>
+                <div className={`file-item-icon ${fileType} list-icon`}>
                   <IconComponent size={18} />
                 </div>
                 <div className="file-item-name">{file.name}</div>

@@ -12,7 +12,7 @@ const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_RETRIES = 3;
 
 /**
- * Custom multipart upload engine — no external Uppy dependency needed.
+ * Custom multipart upload engine - no external Uppy dependency needed.
  * Handles chunking, presigned URLs, progress, pause/resume, and retry.
  */
 export default function UploadManager({ currentPrefix = '', onUploadComplete, showUploadZone = false, setShowUploadZone }) {
@@ -199,7 +199,7 @@ export default function UploadManager({ currentPrefix = '', onUploadComplete, sh
                 Drop files here or click to browse
               </h3>
               <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-                Files will be uploaded to: <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                Files will be uploaded to: <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono-stack)' }}>
                   /{currentPrefix || ''}
                 </span>
               </p>
@@ -271,7 +271,7 @@ export default function UploadManager({ currentPrefix = '', onUploadComplete, sh
                       {upload.status === 'completed' ? 'Complete'
                         : upload.status === 'error' ? upload.error || 'Failed'
                         : upload.status === 'paused' ? 'Paused'
-                        : `${formatFileSize(upload.uploadedBytes)} / ${formatFileSize(upload.size)} • ${formatFileSize(upload.speed)}/s`
+                        : `${formatFileSize(upload.uploadedBytes)} / ${formatFileSize(upload.size)} | ${formatFileSize(upload.speed)}/s`
                       }
                     </div>
                     {(upload.status === 'uploading' || upload.status === 'paused') && (

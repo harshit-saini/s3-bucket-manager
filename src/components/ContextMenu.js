@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Download, Share2, FolderInput, Copy,
-  Trash2, Eye, FileDown
+  Trash2, Eye, Edit3
 } from 'lucide-react';
 
 export default function ContextMenu({ x, y, items, onClose }) {
@@ -43,6 +43,7 @@ export default function ContextMenu({ x, y, items, onClose }) {
     preview: <Eye size={16} />,
     download: <Download size={16} />,
     share: <Share2 size={16} />,
+    rename: <Edit3 size={16} />,
     move: <FolderInput size={16} />,
     copy: <Copy size={16} />,
     delete: <Trash2 size={16} />,

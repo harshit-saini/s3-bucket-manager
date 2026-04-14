@@ -2,7 +2,7 @@
 
 import {
   Upload, FolderPlus, RefreshCw, Search, LayoutGrid, List,
-  Trash2, FolderInput, X
+  Trash2, FolderInput, X, Download, Edit3, CheckCheck
 } from 'lucide-react';
 import { SORT_OPTIONS } from '@/lib/constants';
 
@@ -17,10 +17,16 @@ export default function Toolbar({
   onNewFolder,
   onRefresh,
   selectedCount = 0,
+  selectedFileCount = 0,
+  visibleCount = 0,
   onBulkDelete,
   onBulkMove,
+  onBulkDownload,
+  onBulkRename,
+  onSelectAll,
   onDeselectAll,
   isLoading,
+  isBulkDownloading = false,
 }) {
   return (
     <>
@@ -53,11 +59,19 @@ export default function Toolbar({
               value={searchQuery}
               onChange={e => onSearchChange(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                className="search-clear-btn"
+                onClick={() => onSearchChange('')}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           <select
-            className="select"
-            style={{ width: 160 }}
+            className="select toolbar-sort"
             value={sortBy}
             onChange={e => onSortChange(e.target.value)}
           >
@@ -66,28 +80,19 @@ export default function Toolbar({
             ))}
           </select>
 
-          <div style={{ display: 'flex', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+          <div className="view-toggle" role="group" aria-label="View mode">
             <button
-              className="btn btn-ghost btn-icon"
+              className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
               onClick={() => onViewModeChange('grid')}
-              style={{
-                borderRadius: 0,
-                background: viewMode === 'grid' ? 'var(--glass-hover)' : 'transparent',
-                color: viewMode === 'grid' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              }}
+              aria-pressed={viewMode === 'grid'}
               title="Grid view"
             >
               <LayoutGrid size={16} />
             </button>
             <button
-              className="btn btn-ghost btn-icon"
+              className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
               onClick={() => onViewModeChange('list')}
-              style={{
-                borderRadius: 0,
-                borderLeft: '1px solid var(--border-default)',
-                background: viewMode === 'list' ? 'var(--glass-hover)' : 'transparent',
-                color: viewMode === 'list' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              }}
+              aria-pressed={viewMode === 'list'}
               title="List view"
             >
               <List size={16} />
@@ -99,10 +104,29 @@ export default function Toolbar({
       {selectedCount > 0 && (
         <div className="bulk-actions-bar">
           <span className="bulk-count">{selectedCount} selected</span>
+          {visibleCount > selectedCount && (
+            <button className="btn btn-sm btn-ghost" onClick={onSelectAll}>
+              <CheckCheck size={14} /> Select All
+            </button>
+          )}
           <button className="btn btn-sm btn-ghost" onClick={onDeselectAll}>
             <X size={14} /> Clear
           </button>
-          <div style={{ flex: 1 }} />
+          {selectedFileCount > 0 && (
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={onBulkDownload}
+              disabled={isBulkDownloading}
+            >
+              <Download size={14} /> Download Files
+            </button>
+          )}
+          {selectedCount === 1 && (
+            <button className="btn btn-sm btn-secondary" onClick={onBulkRename}>
+              <Edit3 size={14} /> Rename
+            </button>
+          )}
+          <div className="bulk-spacer" />
           <button className="btn btn-sm btn-secondary" onClick={onBulkMove}>
             <FolderInput size={14} /> Move
           </button>

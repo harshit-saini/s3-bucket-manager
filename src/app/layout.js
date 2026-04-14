@@ -1,9 +1,25 @@
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import { ClerkProvider } from '@clerk/nextjs';
+import { Manrope, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
+
+const manrope = Manrope({
+  subsets: ['latin'],
+  variable: '--font-body',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-display',
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+});
 
 export const metadata = {
-  title: 'S3 Manager — Cloud Storage Browser',
+  title: 'S3 Manager - Cloud Storage Browser',
   description: 'A modern web interface to browse, upload, preview, and manage files in your Amazon S3 buckets.',
   keywords: 'S3, AWS, file manager, cloud storage, upload',
 };
@@ -11,7 +27,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable}`}>
         <body suppressHydrationWarning>
           {children}
           <Toaster
@@ -19,18 +35,18 @@ export default function RootLayout({ children }) {
             toastOptions={{
               duration: 3500,
               style: {
-                background: '#1e2642',
-                color: '#f1f5f9',
-                border: '1px solid rgba(99, 122, 180, 0.15)',
-                borderRadius: '10px',
+                background: '#15223a',
+                color: '#e6edf8',
+                border: '1px solid rgba(84, 108, 151, 0.35)',
+                borderRadius: '12px',
                 fontSize: '0.875rem',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                boxShadow: '0 10px 30px rgba(5, 9, 20, 0.45)',
               },
               success: {
-                iconTheme: { primary: '#22c55e', secondary: '#1e2642' },
+                iconTheme: { primary: '#22c55e', secondary: '#15223a' },
               },
               error: {
-                iconTheme: { primary: '#ef4444', secondary: '#1e2642' },
+                iconTheme: { primary: '#ef4444', secondary: '#15223a' },
               },
             }}
           />

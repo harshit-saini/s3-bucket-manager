@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Folder, ChevronRight, Loader2, FolderInput } from 'lucide-react';
+import { X, Folder, ChevronRight, Loader2, FolderInput, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function MoveDialog({ items = [], currentPrefix = '', onClose, onMoved }) {
@@ -121,7 +121,7 @@ export default function MoveDialog({ items = [], currentPrefix = '', onClose, on
             fontSize: '0.8rem', color: 'var(--text-secondary)',
           }}>
             <Folder size={14} />
-            <span style={{ fontFamily: 'var(--font-mono)' }}>{displayPath}</span>
+            <span style={{ fontFamily: 'var(--font-mono-stack)' }}>{displayPath}</span>
           </div>
 
           {pathHistory.length > 1 && (
@@ -130,7 +130,8 @@ export default function MoveDialog({ items = [], currentPrefix = '', onClose, on
               onClick={navigateBack}
               style={{ marginBottom: 4, color: 'var(--text-accent)' }}
             >
-              ← Back
+              <ArrowLeft size={15} />
+              Back
             </button>
           )}
 

@@ -42,7 +42,8 @@ export function getFolderName(prefix) {
  * Format file size to human readable string
  */
 export function formatFileSize(bytes) {
-  if (bytes === 0 || bytes === undefined || bytes === null) return '—';
+  if (bytes === undefined || bytes === null) return '-';
+  if (bytes === 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let i = 0;
   let size = bytes;
@@ -57,7 +58,7 @@ export function formatFileSize(bytes) {
  * Format date to human readable string
  */
 export function formatDate(dateString) {
-  if (!dateString) return '—';
+  if (!dateString) return '-';
   const date = new Date(dateString);
   const now = new Date();
   const diff = now - date;

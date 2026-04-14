@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getFileType, getFileName } from '@/lib/fileUtils';
 import {
   X, Download, Share2, ChevronLeft, ChevronRight,
-  Loader2, ExternalLink
+  Loader2, ExternalLink, Music
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -114,7 +114,7 @@ export default function PreviewModal({ fileKey, files = [], onClose, onShare, on
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 0 40px var(--accent-glow)',
             }}>
-              <span style={{ fontSize: '3rem' }}>🎵</span>
+              <Music size={44} />
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{fileName}</div>
             <audio controls autoPlay style={{ width: '100%' }}>
